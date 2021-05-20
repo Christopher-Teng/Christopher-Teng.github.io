@@ -1,50 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>使用Scrapy爬取诗词数据</title>
-    <url>/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/</url>
-    <content><![CDATA[<p>在本篇中我将使用 Scrapy 来开发一个简单的文本爬虫，从<a href="https://www.zhsc.net/">中华诗词网</a>上爬取诗词数据。</p>
-<p>首先对目标网站进行分析，在其主页右下角有一个历代作者的链接入口，从该链接可以进入作者列表页面，如下图中红圈所示：</p>
-<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/index.png" class="">
-
-<span id="more"></span>
-
-<p>接下来进入作者列表页面，可以看见在页面下方有一个“历代作者”面板区域，其中按历史时期进行划分，收录了各个时代的文人，如下图红圈所示：</p>
-<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/authorlist.png" class="">
-
-<p>打开开发者面板对页面内容进行分析，可以看到该页面包含了所有作者的链接，只不过页面上仅显示当前选中历史时期下的作者列表，而未选中的部分默认使用<code>style=&quot;display:none;&quot;</code>隐藏了起来，如下图红圈所示：</p>
-<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/dom.png" class="">
-
-<p>仔细浏览以下上面的作者列表页可以发现，中华诗词网收录的文人非常多，而每个人又有很多诗词作品，如果一次全部爬取数据量太大，不仅耗时，而且在不使用代理 IP 的情况下，容易被封，更重要的是，对于传统诗词人们的学习和关注重心都在历史上的著名文人上，而对于全部收录数据来说，这些著名文人的作品只是一小部分。</p>
-<p>因此，我将爬虫设计为只对指定的作者进行爬取，而要实现这一点，正好可以从上面的作者列表页作为种子页面启动爬虫。从该页中的所有作者条目中匹配出指定的作者，然后再链接到诗词列表页面，如下图所示：</p>
-<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poemlist.png" class="">
-
-<p>从诗词列表中，就可以通过每一项的链接到达我们真正要爬取数据的诗词详情页，同时由于某些文人作品很多，采用了分页，因此还需要匹配分页器中的链接地址，依次从所有诗词列表页面中达到详情页爬取数据。</p>
-<p>这里需要注意，很多作者都有和别人同名的作品，而且某个作者自己也可能有很多同名的作品，这种情况尤其常见于宋词当中：词牌名相同，正文不同，如上图中红圈所示，柳永名下同为“黄莺儿”的词作便有两首。这里便要考虑爬取数据之后，怎样存取才更方便日后使用的时候查询数据，在这里我使用标识宋词常用的方法：标题=词牌名+正文首句。</p>
-<p>最后，来分析我们最终需要爬取数据的诗词详情页，如下图所示，需要爬取的数据有：标题、年代、作者和正文：</p>
-<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poem.png" class="">
-
-<p>打开开发者工具，仔细分析页面结构，可以看出，需要爬取的数据全部位于<code>class=&quot;shi_neirong&quot;</code>的 <code>&lt;div&gt;</code> 标签下的<code>class=&quot;zh_shi_xiang1&quot;</code>的 <code>&lt;div&gt;</code> 标签内，该 <code>&lt;div&gt;</code> 标签包括一个 <code>&lt;span&gt;</code> 标签、一个 <code>&lt;p&gt;</code> 标签和一个 <code>&lt;div&gt;</code> 标签，其中 <code>&lt;span&gt;</code> 标签中的是标题，<code>&lt;p&gt;</code> 标签中则同时包含了年代和作者，而 <code>&lt;div&gt;</code> 标签中的是正文，如下图所示：</p>
-<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poem1dom.png" class="">
-
-<p>接下来在随机打开多个详情页，确认页面结构是否符合上面的分析，这里为了节省篇幅，只列举出一个和上面详情页稍有不同的页面，如下图所示：</p>
-<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poem2.png" class="">
-
-<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poem2dom.png" class="">
-
-<p>首先从页面上观察可以发现两处不同，一是正文内容中出现了<code>&lt;p&gt;</code>，二是正文中多了很多蓝色的文字。</p>
-<p>打开开发者工具分析，首先从页面整体结构上看，数据所在的标签位置和层次关系仍然符合上面的分析，如图中横线所示。其次，第一个不同点，多出来的<code>&lt;p&gt;</code>应该是网站后台数据处理错误，将 html 的 <code>&lt;p&gt;</code> 标签以文本存入了诗词数据中，那么我们之后爬取数据时，应该要对数据进行去 html 标签的处理，第二个不同点，可以看出是对诗文内容的注解，以<code>&lt;span&gt;</code>标签的形式插入到正文所在的<code>&lt;div&gt;</code>标签中，注解不是我们需要的数据，之后爬取时应该过滤掉，如图中红圈所示。</p>
-<p>到这里，对于目标网站的分析基本完成，那么下面开始着手编写爬虫。</p>
-]]></content>
-      <categories>
-        <category>网络爬虫</category>
-      </categories>
-      <tags>
-        <tag>Python</tag>
-        <tag>Scrapy</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>使用Scrapy时提取一个块级标签下的所有文本的正确方式</title>
     <url>/2021/04/05/%E4%BD%BF%E7%94%A8Scrapy%E6%97%B6%E6%8F%90%E5%8F%96%E4%B8%80%E4%B8%AA%E5%9D%97%E7%BA%A7%E6%A0%87%E7%AD%BE%E4%B8%8B%E7%9A%84%E6%89%80%E6%9C%89%E6%96%87%E6%9C%AC%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%96%B9%E5%BC%8F/</url>
     <content><![CDATA[<p>使用 Scrapy 爬取一篇博客的内容(<a href="https://www.cnblogs.com/flashsun/p/14266148.html">原文链接</a>)，这里忽略正文中的图片，只针对文本内容。</p>
@@ -84,6 +40,50 @@
 
 <p>使用.//text()时，得到的结果其实只有 a 中的第一个文本节点，即：”Click here to go to the “，因此无法匹配文本”Next Page”，而使用节点本身，得到的是当前节点和其子孙节点的所有文本内容的拼接，即：”Click here to go to the Next Page”，因此成功匹配。</p>
 <p>最后，放上 Scrapy 官方文档中，本文相关内容的<a href="https://docs.scrapy.org/en/latest/topics/selectors.html#using-text-nodes-in-a-condition">链接</a></p>
+]]></content>
+      <categories>
+        <category>网络爬虫</category>
+      </categories>
+      <tags>
+        <tag>Python</tag>
+        <tag>Scrapy</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>使用Scrapy爬取诗词数据</title>
+    <url>/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/</url>
+    <content><![CDATA[<p>在本篇中我将使用 Scrapy 来开发一个简单的文本爬虫，从<a href="https://www.zhsc.net/">中华诗词网</a>上爬取诗词数据。</p>
+<p>首先对目标网站进行分析，在其主页右下角有一个历代作者的链接入口，从该链接可以进入作者列表页面，如下图中红圈所示：</p>
+<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/index.png" class="">
+
+<span id="more"></span>
+
+<p>接下来进入作者列表页面，可以看见在页面下方有一个“历代作者”面板区域，其中按历史时期进行划分，收录了各个时代的文人，如下图红圈所示：</p>
+<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/authorlist.png" class="">
+
+<p>打开开发者面板对页面内容进行分析，可以看到该页面包含了所有作者的链接，只不过页面上仅显示当前选中历史时期下的作者列表，而未选中的部分默认使用<code>style=&quot;display:none;&quot;</code>隐藏了起来，如下图红圈所示：</p>
+<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/dom.png" class="">
+
+<p>仔细浏览以下上面的作者列表页可以发现，中华诗词网收录的文人非常多，而每个人又有很多诗词作品，如果一次全部爬取数据量太大，不仅耗时，而且在不使用代理 IP 的情况下，容易被封，更重要的是，对于传统诗词人们的学习和关注重心都在历史上的著名文人上，而对于全部收录数据来说，这些著名文人的作品只是一小部分。</p>
+<p>因此，我将爬虫设计为只对指定的作者进行爬取，而要实现这一点，正好可以从上面的作者列表页作为种子页面启动爬虫。从该页中的所有作者条目中匹配出指定的作者，然后再链接到诗词列表页面，如下图所示：</p>
+<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poemlist.png" class="">
+
+<p>从诗词列表中，就可以通过每一项的链接到达我们真正要爬取数据的诗词详情页，同时由于某些文人作品很多，采用了分页，因此还需要匹配分页器中的链接地址，依次从所有诗词列表页面中达到详情页爬取数据。</p>
+<p>这里需要注意，很多作者都有和别人同名的作品，而且某个作者自己也可能有很多同名的作品，这种情况尤其常见于宋词当中：词牌名相同，正文不同，如上图中红圈所示，柳永名下同为“黄莺儿”的词作便有两首。这里便要考虑爬取数据之后，怎样存取才更方便日后使用的时候查询数据，在这里我使用标识宋词常用的方法：标题=词牌名+正文首句。</p>
+<p>最后，来分析我们最终需要爬取数据的诗词详情页，如下图所示，需要爬取的数据有：标题、年代、作者和正文：</p>
+<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poem.png" class="">
+
+<p>打开开发者工具，仔细分析页面结构，可以看出，需要爬取的数据全部位于<code>class=&quot;shi_neirong&quot;</code>的 <code>&lt;div&gt;</code> 标签下的<code>class=&quot;zh_shi_xiang1&quot;</code>的 <code>&lt;div&gt;</code> 标签内，该 <code>&lt;div&gt;</code> 标签包括一个 <code>&lt;span&gt;</code> 标签、一个 <code>&lt;p&gt;</code> 标签和一个 <code>&lt;div&gt;</code> 标签，其中 <code>&lt;span&gt;</code> 标签中的是标题，<code>&lt;p&gt;</code> 标签中则同时包含了年代和作者，而 <code>&lt;div&gt;</code> 标签中的是正文，如下图所示：</p>
+<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poem1dom.png" class="">
+
+<p>接下来在随机打开多个详情页，确认页面结构是否符合上面的分析，这里为了节省篇幅，只列举出一个和上面详情页稍有不同的页面，如下图所示：</p>
+<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poem2.png" class="">
+
+<img src="/2021/05/02/%E4%BD%BF%E7%94%A8Scrapy%E7%88%AC%E5%8F%96%E8%AF%97%E8%AF%8D%E6%95%B0%E6%8D%AE/poem2dom.png" class="">
+
+<p>首先从页面上观察可以发现两处不同，一是正文内容中出现了<code>&lt;p&gt;</code>，二是正文中多了很多蓝色的文字。</p>
+<p>打开开发者工具分析，首先从页面整体结构上看，数据所在的标签位置和层次关系仍然符合上面的分析，如图中横线所示。其次，第一个不同点，多出来的<code>&lt;p&gt;</code>应该是网站后台数据处理错误，将 html 的 <code>&lt;p&gt;</code> 标签以文本存入了诗词数据中，那么我们之后爬取数据时，应该要对数据进行去 html 标签的处理，第二个不同点，可以看出是对诗文内容的注解，以<code>&lt;span&gt;</code>标签的形式插入到正文所在的<code>&lt;div&gt;</code>标签中，注解不是我们需要的数据，之后爬取时应该过滤掉，如图中红圈所示。</p>
+<p>到这里，对于目标网站的分析基本完成，那么下面开始着手编写爬虫。</p>
 ]]></content>
       <categories>
         <category>网络爬虫</category>

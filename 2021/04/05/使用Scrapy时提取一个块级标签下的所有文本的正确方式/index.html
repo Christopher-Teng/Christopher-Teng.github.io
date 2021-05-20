@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/safari_pinned_tab.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"christopher-teng.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":true,"comments":{"style":"tabs","active":"gitalk","storage":true,"lazyload":false,"nav":null,"activeClass":"gitalk"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="使用 Scrapy 爬取一篇博客的内容(原文链接)，这里忽略正文中的图片，只针对文本内容。 博客正文内容位于标签： 12345678910111213141516171819202122&lt;div id&#x3D;&quot;cnblogs_post_body&quot; class&#x3D;&quot;blogpost-body blogpost-body-html&quot;&gt;  &lt;p&gt;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用Scrapy时提取一个块级标签下的所有文本的正确方式">
+<meta property="og:url" content="https://christopher-teng.github.io/2021/04/05/%E4%BD%BF%E7%94%A8Scrapy%E6%97%B6%E6%8F%90%E5%8F%96%E4%B8%80%E4%B8%AA%E5%9D%97%E7%BA%A7%E6%A0%87%E7%AD%BE%E4%B8%8B%E7%9A%84%E6%89%80%E6%9C%89%E6%96%87%E6%9C%AC%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%96%B9%E5%BC%8F/index.html">
+<meta property="og:site_name" content="Christopher Teng&#39;s Blog">
+<meta property="og:description" content="使用 Scrapy 爬取一篇博客的内容(原文链接)，这里忽略正文中的图片，只针对文本内容。 博客正文内容位于标签： 12345678910111213141516171819202122&lt;div id&#x3D;&quot;cnblogs_post_body&quot; class&#x3D;&quot;blogpost-body blogpost-body-html&quot;&gt;  &lt;p&gt;">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-04-05T05:33:46.000Z">
+<meta property="article:modified_time" content="2021-05-20T13:21:39.795Z">
+<meta property="article:author" content="滕飞">
+<meta property="article:tag" content="Python">
+<meta property="article:tag" content="Scrapy">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://christopher-teng.github.io/2021/04/05/%E4%BD%BF%E7%94%A8Scrapy%E6%97%B6%E6%8F%90%E5%8F%96%E4%B8%80%E4%B8%AA%E5%9D%97%E7%BA%A7%E6%A0%87%E7%AD%BE%E4%B8%8B%E7%9A%84%E6%89%80%E6%9C%89%E6%96%87%E6%9C%AC%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%96%B9%E5%BC%8F/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>使用Scrapy时提取一个块级标签下的所有文本的正确方式 | Christopher Teng's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="Christopher Teng's Blog" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Christopher Teng's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">关注技术、持续提升</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">6</span></a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">4</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">2</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/Christopher-Teng" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://christopher-teng.github.io/2021/04/05/%E4%BD%BF%E7%94%A8Scrapy%E6%97%B6%E6%8F%90%E5%8F%96%E4%B8%80%E4%B8%AA%E5%9D%97%E7%BA%A7%E6%A0%87%E7%AD%BE%E4%B8%8B%E7%9A%84%E6%89%80%E6%9C%89%E6%96%87%E6%9C%AC%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%96%B9%E5%BC%8F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.JPG">
+      <meta itemprop="name" content="滕飞">
+      <meta itemprop="description" content="学海无涯，争渡争渡......">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Christopher Teng's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          使用Scrapy时提取一个块级标签下的所有文本的正确方式
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-04-05 13:33:46" itemprop="dateCreated datePublished" datetime="2021-04-05T13:33:46+08:00">2021-04-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-05-20 21:21:39" itemprop="dateModified" datetime="2021-05-20T21:21:39+08:00">2021-05-20</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%BD%91%E7%BB%9C%E7%88%AC%E8%99%AB/" itemprop="url" rel="index"><span itemprop="name">网络爬虫</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>使用 Scrapy 爬取一篇博客的内容(<a target="_blank" rel="noopener" href="https://www.cnblogs.com/flashsun/p/14266148.html">原文链接</a>)，这里忽略正文中的图片，只针对文本内容。</p>
+<p>博客正文内容位于标签：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">&quot;cnblogs_post_body&quot;</span> <span class="attr">class</span>=<span class="string">&quot;blogpost-body blogpost-body-html&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">p</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">span</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">strong</span>&gt;</span>你是<span class="tag">&lt;/<span class="name">strong</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">strong</span>&gt;</span>一台电脑，你的名字叫 A<span class="tag">&lt;/<span class="name">strong</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">p</span>&gt;</span>...<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">p</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">span</span>&gt;</span></span><br><span class="line">      如果你纠结，要么去研究一下操作系统是如何处理网络 IO</span><br><span class="line">      的，要么去研究一下包是如何被网卡转换成电信号发送出去的，要么就仅仅把它当做电脑里有个小人在</span><br><span class="line">      <span class="tag">&lt;<span class="name">strong</span>&gt;</span>开枪<span class="tag">&lt;/<span class="name">strong</span>&gt;</span></span><br><span class="line">      吧~</span><br><span class="line">    <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">p</span>&gt;</span>...<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">p</span>&gt;</span>...<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">h1</span>&gt;</span>第三层<span class="tag">&lt;/<span class="name">h1</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">p</span>&gt;</span>...<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line">  ...... ......</span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>可见，正文内容内部的结构比较复杂，没有一致可循的规律，那么怎样提取其中所有的文本内容呢？</p>
+<span id="more"></span>
+
+<p>第一步，先选择 id=cnblogs_post_body 的 div 标签，</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">&quot;cnblogs_post_body&quot;</span> <span class="attr">class</span>=<span class="string">&quot;blogpost-body blogpost-body-html&quot;</span>&gt;</span>...<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>打开终端，使用 Scrapy Shell 测试，</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">scrapy shell https://www.cnblogs.com/flashsun/p/14266148.html</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; post_body=response.xpath(<span class="string">&#x27;//div[@id=&quot;cnblogs_post_body&quot;]&#x27;</span>)</span><br><span class="line">&gt;&gt;&gt; post_body</span><br><span class="line">&gt;&gt;&gt; [&lt;Selector xpath=<span class="string">&#x27;//div[@id=&quot;cnblogs_post_body&quot;]&#x27;</span> data=<span class="string">&#x27;&lt;div id=&quot;cnblogs_post_body&quot; class=&quot;bl...&#x27;</span>&gt;]</span><br></pre></td></tr></table></figure>
+
+<p>然后，尝试使用 text()和 getall()获取所有文本：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; post_body.xpath(<span class="string">&#x27;.//text()&#x27;</span>).getall()</span><br><span class="line">&gt;&gt;&gt; [<span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\xa0&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;你是&#x27;</span>, <span class="string">&#x27;一台电脑，你的名字叫 A&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\xa0&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;很久很久之前，你不与任何其他电脑相连接，孤苦伶仃。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;直到有一天，你</span></span><br><span class="line"><span class="string">希望与另一台电脑 B 建立通信，于是你们各开了一个网口，用一根&#x27;</span>, <span class="string">&#x27;网线&#x27;</span>, <span class="string">&#x27;连接了起来。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\xa0&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;用一根网线连接起来怎么就能&quot;通信&quot;了呢？我可以给你讲 IO、讲中断、讲缓冲区，但这不是研究网络时该关心的问题。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;如果你纠结，要么去研究一下操作系统是如何处理网络 IO 的，要么去研究一下包是如何被网卡转换成电信号发送出去的，要么就仅仅把它当做电脑里有个小人在&#x27;</span>, <span class="string">&#x27;开枪&#x27;</span>, <span class="string">&#x27;吧~&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;反正，你们就是连起来了，并且可以通信。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\xa0&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;第一层&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\xa0&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;有一天，一个新伙伴 C 加入了，但聪明的你们很快发现，可以每个人开&#x27;</span>, <span class="string">&#x27;两个网口&#x27;</span>, <span class="string">&#x27;，用一共&#x27;</span>, <span class="string">&#x27;三根网线&#x27;</span>, <span class="string">&#x27;，彼此相连。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;随着越来越多的人加入，你发现身上开的网口实在太多了，而且网线密密麻麻，混乱不堪。（而实际上一台电脑根本开不了这么多网口，所以这种连线只在理论上可行，所以连不上的</span></span><br><span class="line"><span class="string">我就用红色虚线表示了，就是这么严谨哈哈~）&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;于是你们发明了一个中间设备，你们将网线都插到这个设备上，由这个设备做转发，就可以彼此之间通信了，本质上和原来一样，只不过网口的数量和网线的数量减少了，不再那么混乱。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;你给它取名叫&#x27;</span>, <span class="string">&#x27;集线器&#x27;</span>, <span class="string">&#x27;，它仅仅是无脑将电信号&#x27;</span>, <span class="string">&#x27;转发到所有出口（广播）&#x27;</span>, <span class="string">&#x27;，不做任何处理，你觉得它是没有智商的，因此把人家定性在了&#x27;</span>, <span class="string">&#x27;物理层&#x27;</span>, <span class="string">&#x27;。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;\xa0&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;由于转发到了所有出口，那 BCDE 四台机器怎么知道数据包是不是发给自己的呢？&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;首先，你要给所有的连接到交换机的设备，都起个名字。原来你们叫 ABCD，但现在需要一个更专业的，&#x27;</span>, <span class="string">&#x27;全局唯一&#x27;</span>, <span class="string">&#x27;的名字作为标识，你把这个更高端的名字称为\xa0&#x27;</span>, <span class="string">&#x27;MAC 地址&#x27;</span>, <span class="string">&#x27;。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;你的 MAC 地址是 aa-aa-aa-aa-aa-aa，你的伙伴 b 的 MAC 地址是 bb-bb-bb-bb-bb-bb，以此类推，不重复就好。&#x27;</span>, <span class="string">&#x27;\n&#x27;</span>, <span class="string">&#x27;这样，A 在发送数据包给 B 时，只要在头部拼接</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string">......]</span></span><br></pre></td></tr></table></figure>
+
+<p>得到结果是一个所有文本的列表，或者说是当前 div 元素下所有文本节点的集合，那么怎样才能将结果拼接成一篇完整的博客内容呢？</p>
+<p>最直接暴力的办法当然是通过循环迭代将列表中所有元素拼接起来，这里不在赘述。其实在 XPath 中原生提供了 string()函数来转换字符串，下面尝试使用：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; post_body.xpath(<span class="string">&#x27;string(.//text())&#x27;</span>).getall()</span><br><span class="line">&gt;&gt;&gt; [<span class="string">&#x27;\n&#x27;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>什么鬼？！好好的一大篇文章就剩下一个换行……</p>
+<p>一开始我也只好倒回去老老实实写 for…in…，直到后来翻看官方文档才找到问题所在：</p>
+<blockquote>
+<p>When you need to use the text content as argument to an XPath string function, avoid using .//text() and use just . instead.</p>
+</blockquote>
+<p>当我们使用.//text()时，所得到的是一个 node-set，把一个 node-set 传递给 string()进行字符串转换的时候，只会作用于 node-set 中的第一个元素，类似的情况还有使用 contains()和 starts-width()，而这里 post_body 中的第一个元素正好就是”\n”！</p>
+<p>而如果将一个 node 进行字符串转换，就会将该节点以及其子孙节点中的文本进行拼接，因此在这个例子中，我们因该直接对 post_body 使用 string()：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; post_body.xpath(<span class="string">&#x27;string(.)&#x27;</span>).getall()</span><br><span class="line">&gt;&gt;&gt; [<span class="string">&#x27;\n\xa0\n你是一台电脑，你的名字叫 A\n\xa0\n很久很久之前，你不与任何其他电脑相连接，孤苦伶仃。\n\n直到有一天，你希望与另一台电脑 B 建立通信，于是你们各开了一个网口，用一根网线连接了起来。\n\n\xa0\n用一根网线连接起来怎么就能&quot;通信&quot;了呢？我可以给你讲 IO、讲中断、讲缓冲区，但这不是研究网络时该关心的问题。\n如果你纠结，要么去研究一下操作系统是如何处理网络 IO 的，要么去研究一下包是如何被网卡转换成电信号发送出去的，要么就仅仅把它当做电脑里有个小人在开枪吧~\n\n反正，你们就是连起来了，并且可以通信。\n\xa0\n第一层\n\xa0\n有一天，一个新伙伴 C 加入了，但聪明的你们很快发现，可以每个人开两个网口，用一共三根网线，彼此相连。\n\n随着越来越多的人加入，你发现身上开的网口实在太多了，而且网线密密麻麻，混乱不堪。（而实际上一台电脑根本开不了这么多网口，所以这种连线只在理论上可行，所以连不上的我就</span></span><br><span class="line"><span class="string">用红色虚线表示了，就是这么严谨哈哈~）\n\n于是你们发明了一个中间设备，你们将网线都插到这个设备上，由这个设备做转发，就可以彼此之间通信了，本质上和原来一样，只不过网口的数量和网线的数量减少了，不再那么混乱。\n\n你给它取名叫集线器，它仅仅是无脑将电信号转发到所有出口（广播），不做任何处理，你觉得它是没有智商的，因此</span></span><br><span class="line"><span class="string">把人家定性在了物理层。\n\xa0\n由于转发到了所有出口，那 BCDE 四台机器怎么知道数据包是不是发给自己的呢？\n首先，你要给所有的连接到交换机的设备，都起个名字。原</span></span><br><span class="line"><span class="string">来你们叫 ABCD，但现在需要一</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string">，于是收下了这个包\n\xa0\n更详细且精准的过程：\n读到这相信大家已经很累了，理解上述过程基本上网络层以下的部分主流程就基本疏通了，如果你想要本过程更为专业的过程描述，可以在公众号 低并发编程 后台回复 网络，获得我模拟这个过程的 Cisco Packet Tracer 源文件。\n\n每一步包的传输都 会有各层的原始数据，以及专业的过程描述\n\n\xa0\n\xa0\n同时在此基础之上你也可以设计自己的网络拓扑结构，进行各种实验，来加深网络传输过程的理解。\n\xa0\n后记\n\xa0\n至此，经过物理层、数据链路层、网络层这前三层的协议，以及根据这些协议设计的各种网络设备（网线、集线器、交换机、路由器），理论上只要拥有对方的 IP 地址，就已经将地球上任意位置的两个节点连通了。\n\n本文经过了很多次的修改，删减了不少影响主流程的内容，就是为了让读者能抓住网络传输前三层的真正核心思想。同时网络相关 的知识也是多且杂，我也还有很多搞不清楚的地方，非常欢迎大家与我交流，共同进步。\n&#x27;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>哈哈，这次终于正确返回了一篇完整的博客文本内容！当然，在这里我们可以直接使用 get()而不是 getall()，因为 string(.)会自动将当前节点和其子孙节点的文本进行拼接，这样就可以获得一个字符串方便直接使用。</p>
+<p>在官方文档中还列举了一个使用 contains()对节点文本内容进行匹配的例子：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; from scrapy import Selector</span><br><span class="line">&gt;&gt;&gt; sel=Selector(text=<span class="string">&#x27;&lt;a href=&quot;#&quot;&gt;Click here to go to the &lt;strong&gt;Next Page&lt;/strong&gt;&lt;/a&gt;&#x27;</span>)</span><br><span class="line">&gt;&gt;&gt; sel.xpath(<span class="string">&#x27;//a[contains(.//text(),&#x27;</span>Next Page<span class="string">&#x27;)]&#x27;</span>).getall()</span><br><span class="line">&gt;&gt;&gt; []</span><br><span class="line">&gt;&gt;&gt; sel.xpath(<span class="string">&#x27;//a[contains(.,&#x27;</span>Next Page<span class="string">&#x27;)]&#x27;</span>).getall()</span><br><span class="line">&gt;&gt;&gt; [<span class="string">&#x27;&lt;a href=&quot;#&quot;&gt;Click here to go to the &lt;strong&gt;Next Page&lt;/strong&gt;&lt;/a&gt;&#x27;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>使用.//text()时，得到的结果其实只有 a 中的第一个文本节点，即：”Click here to go to the “，因此无法匹配文本”Next Page”，而使用节点本身，得到的是当前节点和其子孙节点的所有文本内容的拼接，即：”Click here to go to the Next Page”，因此成功匹配。</p>
+<p>最后，放上 Scrapy 官方文档中，本文相关内容的<a target="_blank" rel="noopener" href="https://docs.scrapy.org/en/latest/topics/selectors.html#using-text-nodes-in-a-condition">链接</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Python/" rel="tag"># Python</a>
+              <a href="/tags/Scrapy/" rel="tag"># Scrapy</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/04/05/%E7%BD%91%E7%BB%9C%E7%88%AC%E8%99%AB%E4%B8%AD%E5%B8%B8%E7%94%A8%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8F%90%E5%8F%96%E5%B7%A5%E5%85%B7/" rel="prev" title="网络爬虫中常用的数据提取工具">
+      <i class="fa fa-chevron-left"></i> 网络爬虫中常用的数据提取工具
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/04/05/%E9%80%9A%E8%BF%87%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E7%AE%97%E6%B3%95%E8%A7%A3%E5%86%B3618%E6%9C%80%E4%BD%B3%E8%B4%AD%E7%89%A9%E6%96%B9%E6%A1%88/" rel="next" title="通过动态规划算法解决618最佳购物方案">
+      通过动态规划算法解决618最佳购物方案 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="滕飞"
+      src="/images/avatar.JPG">
+  <p class="site-author-name" itemprop="name">滕飞</p>
+  <div class="site-description" itemprop="description">学海无涯，争渡争渡......</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">6</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">滕飞</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/pjax/pjax.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : '59516c890e7464ea64ce',
+      clientSecret: 'ae530ccdeef24d0ccd8de635f47acecc55e5b063',
+      repo        : 'christopher-teng.github.io',
+      owner       : 'Christopher-Teng',
+      admin       : ['Christopher-Teng'],
+      id          : 'f1bee817d98c7f8dc0702590c822c047',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+    </div>
+</body>
+</html>
